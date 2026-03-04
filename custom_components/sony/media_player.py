@@ -18,6 +18,7 @@ from homeassistant.const import (
     CONF_HOST, CONF_NAME, STATE_OFF, STATE_ON, STATE_PLAYING, STATE_PAUSED)
 import homeassistant.helpers.config_validation as cv
 
+from homeassistant.components import configurator
 from homeassistant.helpers.json import save_json
 from homeassistant.util.json import load_json
 
@@ -106,8 +107,7 @@ def setup_sonymediaplayer(config, sony_device, hass, add_devices):
         # If we came here and configuring this host, mark as done
         if host in _CONFIGURING:
             request_id = _CONFIGURING.pop(host)
-            configurator = hass.components.configurator
-            configurator.request_done(request_id)
+            configurator.request_done(hass, request_id)
             _LOGGER.info("Discovery configuration done")
 
         if broadcast:
@@ -131,12 +131,10 @@ def request_configuration(config, hass, add_devices):
     ircc_port = config.get(CONF_IRCC_PORT)
     psk = None
 
-    configurator = hass.components.configurator
-
     # We got an error if this method is called while we are configuring
     if host in _CONFIGURING:
         configurator.notify_errors(
-            _CONFIGURING[host], "Failed to register, please try again.")
+            hass, _CONFIGURING[host], "Failed to register, please try again.")
         return
 
     def sony_configuration_callback(data):
@@ -169,7 +167,7 @@ def request_configuration(config, hass, add_devices):
             request_configuration(config, hass, add_devices)
 
     _CONFIGURING[host] = configurator.request_config(
-        name, sony_configuration_callback,
+        hass, name, sony_configuration_callback,
         description='Enter the Pin shown on your Sony Device. '
         'If no Pin is shown, enter 0000 '
         'to let the device show you a Pin.',
