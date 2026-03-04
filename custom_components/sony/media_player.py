@@ -7,7 +7,11 @@ https://github.com/dilruacs/media_player.sony
 import logging
 import time
 
+import sonyapilib.device
 from sonyapilib.device import SonyDevice
+
+# BDP-S5500 and similar devices respond slowly; increase from default 5s
+sonyapilib.device.TIMEOUT = 15
 
 import voluptuous as vol
 
@@ -193,8 +197,8 @@ class SonyMediaPlayerEntity(MediaPlayerEntity):
         self._muted = False
         self._id = None
         self._playing = False
-        _LOGGER.error(sony_device.pin)
-        _LOGGER.error(sony_device.client_id)
+        _LOGGER.debug("Device pin: %s", sony_device.pin)
+        _LOGGER.debug("Device client_id: %s", sony_device.client_id)
 
         try:
             self.update()
@@ -242,8 +246,13 @@ class SonyMediaPlayerEntity(MediaPlayerEntity):
 
     def update_volume(self):
         """Update volume info."""
-        self._attr_volume_level = self.sonydevice.get_volume() / 100
-        _LOGGER.debug(self._attr_volume_level)
+        try:
+            self._attr_volume_level = self.sonydevice.get_volume() / 100
+            _LOGGER.debug(self._attr_volume_level)
+        except AttributeError:
+            _LOGGER.debug("Device does not support volume control")
+        except Exception as ex:  # pylint: disable=broad-except
+            _LOGGER.debug("Failed to get volume: %s", ex)
 
     @property
     def name(self):
@@ -316,21 +325,33 @@ class SonyMediaPlayerEntity(MediaPlayerEntity):
         self.sonydevice.stop()
 
     def volume_up(self):
-        """Send stop command."""
-        self.sonydevice.volume_up()
-        time.sleep(0.5)
-        self.update_volume()
+        """Send volume up command."""
+        try:
+            self.sonydevice.volume_up()
+            time.sleep(0.5)
+            self.update_volume()
+        except Exception as ex:  # pylint: disable=broad-except
+            _LOGGER.debug("Volume up not supported: %s", ex)
 
     def volume_down(self):
-        """Send stop command."""
-        self.sonydevice.volume_down()
-        time.sleep(0.5)
-        self.update_volume()
+        """Send volume down command."""
+        try:
+            self.sonydevice.volume_down()
+            time.sleep(0.5)
+            self.update_volume()
+        except Exception as ex:  # pylint: disable=broad-except
+            _LOGGER.debug("Volume down not supported: %s", ex)
 
     def set_volume_level(self, volume):
         """Send set volume command."""
-        self.sonydevice.set_volume(int(volume * 100))
+        try:
+            self.sonydevice.set_volume(int(volume * 100))
+        except Exception as ex:  # pylint: disable=broad-except
+            _LOGGER.debug("Set volume not supported: %s", ex)
 
     def mute_volume(self, mute):
-        """Send stop command."""
-        self.sonydevice.mute()
+        """Send mute command."""
+        try:
+            self.sonydevice.mute()
+        except Exception as ex:  # pylint: disable=broad-except
+            _LOGGER.debug("Mute not supported: %s", ex)
