@@ -203,8 +203,19 @@ class SonyMediaPlayerEntity(MediaPlayerEntity):
 
     def update(self):
         """Update TV info."""
-        self.sonydevice.init_device()
-        if not self.sonydevice.get_power_status():
+        try:
+            self.sonydevice.init_device()
+        except Exception as ex:  # pylint: disable=broad-except
+            _LOGGER.error("Sony init_device failed: %s", ex)
+            self._state = STATE_OFF
+            return
+
+        try:
+            if not self.sonydevice.get_power_status():
+                self._state = STATE_OFF
+                return
+        except Exception as ex:  # pylint: disable=broad-except
+            _LOGGER.error("Sony get_power_status failed: %s", ex)
             self._state = STATE_OFF
             return
 
@@ -212,22 +223,21 @@ class SonyMediaPlayerEntity(MediaPlayerEntity):
 
         # Retrieve the latest data.
         try:
-            if self._state == STATE_ON:
-                power_status = self.sonydevice.get_power_status()
-                if power_status:
-                    self.update_volume()
-                    playback_info = self.sonydevice.get_playing_status()
-                    if playback_info == "PLAYING":
-                        self._state = STATE_PLAYING
-                    elif playback_info == "PAUSED_PLAYBACK":
-                        self._state = STATE_PAUSED
-                    else:
-                        self._state = STATE_ON
+            power_status = self.sonydevice.get_power_status()
+            if power_status:
+                self.update_volume()
+                playback_info = self.sonydevice.get_playing_status()
+                if playback_info == "PLAYING":
+                    self._state = STATE_PLAYING
+                elif playback_info == "PAUSED_PLAYBACK":
+                    self._state = STATE_PAUSED
                 else:
-                    self._state = STATE_OFF
+                    self._state = STATE_ON
+            else:
+                self._state = STATE_OFF
 
         except Exception as exception_instance:  # pylint: disable=broad-except
-            _LOGGER.error(exception_instance)
+            _LOGGER.error("Sony update failed: %s", exception_instance)
             self._state = STATE_OFF
 
     def update_volume(self):
