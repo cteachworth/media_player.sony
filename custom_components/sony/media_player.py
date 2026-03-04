@@ -288,7 +288,8 @@ class SonyMediaPlayerEntity(MediaPlayerEntity):
 
     def turn_on(self):
         """Turn the media player on."""
-        self.sonydevice.power(True)
+        broadcast = getattr(self.sonydevice, 'broadcast', '255.255.255.255')
+        self.sonydevice.power(True, broadcast)
 
     def turn_off(self):
         """Turn off media player."""
