@@ -18,7 +18,8 @@ from homeassistant.const import (
     CONF_HOST, CONF_NAME, STATE_OFF, STATE_ON, STATE_PLAYING, STATE_PAUSED)
 import homeassistant.helpers.config_validation as cv
 
-from homeassistant.util.json import load_json, save_json
+from homeassistant.helpers.json import save_json
+from homeassistant.util.json import load_json
 
 
 VERSION = '0.1.3'
