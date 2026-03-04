@@ -118,10 +118,13 @@ def setup_sonymediaplayer(config, sony_device, hass, add_devices):
             sony_device.broadcast = broadcast
 
         hass_device = SonyMediaPlayerEntity(sony_device)
-        config[host] = hass_device.sonydevice.save_to_json()
 
-        # Save config, we need the mac address to support wake on LAN
-        save_json(hass.config.path(SONY_CONFIG_FILE), config)
+        # Save only the device data keyed by host IP (not the full platform config)
+        sony_config = load_json(hass.config.path(SONY_CONFIG_FILE))
+        if not isinstance(sony_config, dict):
+            sony_config = {}
+        sony_config[host] = hass_device.sonydevice.save_to_json()
+        save_json(hass.config.path(SONY_CONFIG_FILE), sony_config)
 
         add_devices([hass_device])
 
