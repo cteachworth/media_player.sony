@@ -362,3 +362,21 @@ class SonyMediaPlayerEntity(MediaPlayerEntity):
             self.sonydevice.mute()
         except Exception as ex:  # pylint: disable=broad-except
             _LOGGER.debug("Mute not supported: %s", ex)
+
+    def play_media(self, media_type, media_id, **kwargs):
+        """Send IRCC command or launch app by name."""
+        if media_type == "app":
+            apps = getattr(self.sonydevice, 'apps', {})
+            if media_id in apps:
+                self.sonydevice.start_app(media_id)
+            else:
+                _LOGGER.warning("App not found: %s (available: %s)",
+                                media_id, list(apps.keys()))
+        else:
+            # Treat media_id as an IRCC command name
+            commands = getattr(self.sonydevice, 'commands', {})
+            if media_id in commands:
+                self.sonydevice._send_command(media_id)
+            else:
+                _LOGGER.warning("Command not found: %s (available: %s)",
+                                media_id, list(commands.keys()))
