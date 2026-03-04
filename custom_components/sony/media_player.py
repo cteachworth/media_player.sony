@@ -93,6 +93,9 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
         host_ip, host_config = sony_config.popitem()
         if host_ip == host:
             device = SonyDevice.load_from_json(host_config)
+            broadcast = config.get(CONF_BROADCAST_ADDRESS)
+            if broadcast:
+                device.broadcast = broadcast
             hass_device = SonyMediaPlayerEntity(device)
             add_devices([hass_device])
             return
