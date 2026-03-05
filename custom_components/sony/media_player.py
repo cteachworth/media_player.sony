@@ -27,7 +27,7 @@ from homeassistant.helpers.json import save_json
 from homeassistant.util.json import load_json
 
 
-VERSION = '0.1.3'
+VERSION = '0.2.1'
 
 REQUIREMENTS = ['sonyapilib==0.4.3']
 
@@ -203,49 +203,47 @@ class SonyMediaPlayerEntity(MediaPlayerEntity):
         self._muted = False
         self._id = None
         self._playing = False
+        self._device_initialized = False
         _LOGGER.debug("Device pin: %s", sony_device.pin)
         _LOGGER.debug("Device client_id: %s", sony_device.client_id)
 
         try:
-            self.update()
+            self.sonydevice.init_device()
+            self._device_initialized = True
         except Exception:  # pylint: disable=broad-except
-            self._state = STATE_OFF
+            _LOGGER.warning("Sony initial device init failed, will retry")
 
     def update(self):
         """Update TV info."""
-        try:
-            self.sonydevice.init_device()
-        except Exception as ex:  # pylint: disable=broad-except
-            _LOGGER.error("Sony init_device failed: %s", ex)
-            self._state = STATE_OFF
-            return
+        # Only re-init if the initial startup init failed
+        if not self._device_initialized:
+            try:
+                self.sonydevice.init_device()
+                self._device_initialized = True
+            except Exception as ex:  # pylint: disable=broad-except
+                _LOGGER.debug("Sony init_device retry failed: %s", ex)
+                self._state = STATE_OFF
+                return
 
         try:
             if not self.sonydevice.get_power_status():
                 self._state = STATE_OFF
                 return
         except Exception as ex:  # pylint: disable=broad-except
-            _LOGGER.error("Sony get_power_status failed: %s", ex)
+            _LOGGER.debug("Sony get_power_status failed: %s", ex)
             self._state = STATE_OFF
             return
 
-        self._state = STATE_ON
-
-        # Retrieve the latest data.
+        # Device is on — retrieve current state
         try:
-            power_status = self.sonydevice.get_power_status()
-            if power_status:
-                self.update_volume()
-                playback_info = self.sonydevice.get_playing_status()
-                if playback_info == "PLAYING":
-                    self._state = STATE_PLAYING
-                elif playback_info == "PAUSED_PLAYBACK":
-                    self._state = STATE_PAUSED
-                else:
-                    self._state = STATE_ON
+            self.update_volume()
+            playback_info = self.sonydevice.get_playing_status()
+            if playback_info == "PLAYING":
+                self._state = STATE_PLAYING
+            elif playback_info == "PAUSED_PLAYBACK":
+                self._state = STATE_PAUSED
             else:
-                self._state = STATE_OFF
-
+                self._state = STATE_ON
         except Exception as exception_instance:  # pylint: disable=broad-except
             _LOGGER.error("Sony update failed: %s", exception_instance)
             self._state = STATE_OFF
